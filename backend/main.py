@@ -1,5 +1,6 @@
 import uuid
 import time
+from typing import Optional
 from datetime import datetime, timezone
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,25 +34,30 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     init_db()
-    # Create default demo user if not exists
+    # Create or update default demo user
     db = next(get_db())
     demo_email = "employee@company.com"
     existing_user = db.query(User).filter(User.email == demo_email).first()
+    new_hash = get_password_hash("password123")
     if not existing_user:
         demo_user = User(
             id=str(uuid.uuid4()),
             email=demo_email,
-            password_hash=get_password_hash("password123"),
+            password_hash=new_hash,
             full_name="Somchai Jaidee",
             department="IT Support"
         )
         db.add(demo_user)
         db.commit()
+    else:
+        existing_user.password_hash = new_hash
+        db.commit()
 
 @app.post("/api/v1/auth/login", response_model=TokenResponse, tags=["Auth"])
 def login(req: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == req.email).first()
-    if not user or not verify_password(req.password, user.password_hash):
+    req_email = req.email.strip().lower()
+    user = db.query(User).filter(User.email == req_email).first()
+    if not user or not verify_password(req.password.strip(), user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
@@ -84,13 +90,11 @@ def upload_contacts(
         if not item.normalized_phone or not item.raw_name:
             continue
 
-        # Check if Global Contact already exists for this normalized phone
         global_contact = db.query(GlobalContact).filter(
             GlobalContact.normalized_phone == item.normalized_phone
         ).first()
 
         if not global_contact:
-            # 1. Insert New Global Contact
             new_id = str(uuid.uuid4())
             global_contact = GlobalContact(
                 id=new_id,
@@ -101,7 +105,6 @@ def upload_contacts(
             db.add(global_contact)
             db.flush()
 
-            # Record provenance source
             source = ContactSource(
                 id=str(uuid.uuid4()),
                 global_contact_id=new_id,
@@ -112,8 +115,6 @@ def upload_contacts(
             db.add(source)
             inserted_new += 1
         else:
-            # 2. Merge / Update Existing Global Contact
-            # Record source if not already recorded by this user for this phone
             existing_source = db.query(ContactSource).filter(
                 ContactSource.global_contact_id == global_contact.id,
                 ContactSource.uploaded_by_user_id == user_id
@@ -130,8 +131,6 @@ def upload_contacts(
                 db.add(source)
                 global_contact.sources_count += 1
             
-            # De-duplication Merging Rule:
-            # If new name is cleaner/longer or matches frequent pattern, update primary_name
             if len(item.raw_name) > len(global_contact.primary_name):
                 global_contact.primary_name = item.raw_name
             
