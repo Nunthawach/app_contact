@@ -41,7 +41,7 @@ class ApiService {
     }
   }
 
-  /// 1. Register API (with 45s Timeout for Render Cold Start Wake-up)
+  /// 1. Register API
   static Future<Map<String, dynamic>> register({
     required String email,
     required String password,
@@ -70,7 +70,7 @@ class ApiService {
       }
     } catch (e) {
       debugPrint("Register error: $e");
-      return {'success': false, 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (โปรดลองกดอีกครั้งเพื่อปลุกเซิร์ฟเวอร์)'};
+      return {'success': false, 'message': 'ไม่สามารถเชื่อมต่อได้: $e'};
     }
   }
 
