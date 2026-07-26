@@ -9,14 +9,11 @@ class ApiService {
   static String? _inMemoryToken;
   static const _storage = FlutterSecureStorage();
 
-  // Local PC IP Address for Real Devices & Emulators
-  static String serverIp = '192.168.1.11';
+  // Production Server URL on Render Cloud
+  static const String liveServerUrl = 'https://enterprise-contact.onrender.com/api/v1';
 
   static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:8000/api/v1';
-    }
-    return 'http://$serverIp:8000/api/v1';
+    return liveServerUrl;
   }
 
   static Future<String?> getToken() async {
