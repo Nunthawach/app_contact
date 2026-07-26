@@ -41,7 +41,7 @@ class ApiService {
     }
   }
 
-  /// 1. Register API
+  /// 1. Register API (with 45s Timeout for Render Cold Start Wake-up)
   static Future<Map<String, dynamic>> register({
     required String email,
     required String password,
@@ -58,7 +58,7 @@ class ApiService {
           'full_name': fullName.trim(),
           'department': department.trim(),
         }),
-      );
+      ).timeout(const Duration(seconds: 45));
 
       final data = jsonDecode(response.body);
       if (response.statusCode == 201) {
@@ -69,7 +69,8 @@ class ApiService {
         return {'success': false, 'message': data['detail'] ?? 'การสมัครสมาชิกล้มเหลว'};
       }
     } catch (e) {
-      return {'success': false, 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'};
+      debugPrint("Register error: $e");
+      return {'success': false, 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (โปรดลองกดอีกครั้งเพื่อปลุกเซิร์ฟเวอร์)'};
     }
   }
 
@@ -83,7 +84,7 @@ class ApiService {
           'email': email,
           'password': password,
         }),
-      );
+      ).timeout(const Duration(seconds: 45));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -116,7 +117,7 @@ class ApiService {
         'device_id': 'flutter_mobile_app',
         'contacts': contacts.map((c) => c.toJson()).toList(),
       }),
-    );
+    ).timeout(const Duration(seconds: 45));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -139,7 +140,7 @@ class ApiService {
       headers: {
         'Authorization': 'Bearer $token',
       },
-    );
+    ).timeout(const Duration(seconds: 45));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
