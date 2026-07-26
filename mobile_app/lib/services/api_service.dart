@@ -41,7 +41,39 @@ class ApiService {
     }
   }
 
-  /// 1. Login API
+  /// 1. Register API
+  static Future<Map<String, dynamic>> register({
+    required String email,
+    required String password,
+    required String fullName,
+    required String department,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email.trim(),
+          'password': password.trim(),
+          'full_name': fullName.trim(),
+          'department': department.trim(),
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 201) {
+        String token = data['access_token'];
+        await saveToken(token);
+        return {'success': true, 'data': data};
+      } else {
+        return {'success': false, 'message': data['detail'] ?? 'การสมัครสมาชิกล้มเหลว'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'};
+    }
+  }
+
+  /// 2. Login API
   static Future<bool> login(String email, String password) async {
     try {
       final response = await http.post(
@@ -67,7 +99,7 @@ class ApiService {
     return false;
   }
 
-  /// 2. Upload Contacts API
+  /// 3. Upload Contacts API
   static Future<Map<String, dynamic>> uploadContacts(List<RawContactItemDto> contacts) async {
     String? token = await getToken();
     if (token == null || token.isEmpty) {
@@ -93,7 +125,7 @@ class ApiService {
     }
   }
 
-  /// 3. Sync Contacts API
+  /// 4. Sync Contacts API
   static Future<int> syncGlobalContacts() async {
     String? token = await getToken();
     if (token == null || token.isEmpty) {

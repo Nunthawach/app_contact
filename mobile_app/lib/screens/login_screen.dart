@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'scan_upload_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -128,6 +129,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           'เข้าสู่ระบบ (Login)',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
                         ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Register Button Link
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                  );
+                },
+                child: const Text(
+                  'ยังไม่มีบัญชีผู้ใช้? สมัครสมาชิกใหม่ (Sign Up)',
+                  style: TextStyle(color: Color(0xFFA855F7), fontWeight: FontWeight.w600),
                 ),
               ),
             ],

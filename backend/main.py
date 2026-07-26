@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from database import init_db, get_db, User, GlobalContact, ContactSource
 from models import (
-    LoginRequest, TokenResponse, 
+    LoginRequest, RegisterRequest, TokenResponse, 
     UploadContactsRequest, UploadContactsResponse,
     SyncResponse, SyncContactItem
 )
@@ -55,6 +55,58 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.post("/api/v1/auth/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED, tags=["Auth"])
+def register(req: RegisterRequest, db: Session = Depends(get_db)):
+    req_email = req.email.strip().lower()
+    if not req_email or "@" not in req_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="รูปแบบอีเมลไม่ถูกต้อง"
+        )
+    if not req.password or len(req.password.strip()) < 4:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร"
+        )
+    if not req.full_name or len(req.full_name.strip()) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="กรุณากรอกชื่อ-นามสกุลให้ครบถ้วน"
+        )
+
+    # Check if email is already registered
+    existing_user = db.query(User).filter(User.email == req_email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="อีเมลนี้ถูกลงทะเบียนในระบบแล้ว"
+        )
+
+    user_id = str(uuid.uuid4())
+    hashed_pwd = get_password_hash(req.password.strip())
+    new_user = User(
+        id=user_id,
+        email=req_email,
+        password_hash=hashed_pwd,
+        full_name=req.full_name.strip(),
+        department=req.department.strip() if req.department else "General"
+    )
+    db.add(new_user)
+    db.commit()
+
+    token = create_access_token(data={"sub": new_user.id, "email": new_user.email})
+    return TokenResponse(
+        access_token=token,
+        token_type="Bearer",
+        expires_in=86400,
+        user_info={
+            "id": new_user.id,
+            "email": new_user.email,
+            "full_name": new_user.full_name,
+            "department": new_user.department
+        }
+    )
 
 @app.post("/api/v1/auth/login", response_model=TokenResponse, tags=["Auth"])
 def login(req: LoginRequest, db: Session = Depends(get_db)):
