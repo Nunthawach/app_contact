@@ -2,6 +2,7 @@ import uuid
 import time
 from typing import Optional
 from datetime import datetime, timezone
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -17,24 +18,10 @@ from auth import (
     create_access_token, get_current_user
 )
 
-app = FastAPI(
-    title="Internal Contact Directory API",
-    version="1.0.0",
-    description="Enterprise Directory Backend with De-duplication and Offline Sync"
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.on_event("startup")
-def on_startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # App Startup: Initialize DB and ensure demo user exists
     init_db()
-    # Create or update default demo user
     db = next(get_db())
     demo_email = "employee@company.com"
     existing_user = db.query(User).filter(User.email == demo_email).first()
@@ -52,6 +39,22 @@ def on_startup():
     else:
         existing_user.password_hash = new_hash
         db.commit()
+    yield
+
+app = FastAPI(
+    title="Internal Contact Directory API",
+    version="1.0.0",
+    description="Enterprise Directory Backend with De-duplication and Offline Sync",
+    lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/api/v1/auth/login", response_model=TokenResponse, tags=["Auth"])
 def login(req: LoginRequest, db: Session = Depends(get_db)):
