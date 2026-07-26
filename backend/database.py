@@ -8,10 +8,13 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./enterprise_contacts.db")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(
-    DATABASE_URL, 
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-)
+def build_engine(url: str):
+    return create_engine(
+        url, 
+        connect_args={"check_same_thread": False} if url.startswith("sqlite") else {}
+    )
+
+engine = build_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -50,7 +53,15 @@ class ContactSource(Base):
     global_contact = relationship("GlobalContact", back_populates="sources")
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    global engine, SessionLocal
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Warning: Primary database connection failed ({e}). Falling back to SQLite...")
+        fallback_url = "sqlite:///./enterprise_contacts.db"
+        engine = build_engine(fallback_url)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        Base.metadata.create_all(bind=engine)
 
 def get_db():
     db = SessionLocal()
