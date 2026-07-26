@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.db
+*.sqlite3
+venv/
+.venv/
+env/
+.env
+
+# Flutter / Dart
+build/
+.dart_tool/
+.pub-cache/
+.pub/
+android/.gradle
+android/app/build
+ios/Pods/
+ios/.symlinks/
+
+# IDE & OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

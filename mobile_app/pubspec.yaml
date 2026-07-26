@@ -1,0 +1,27 @@
+name: enterprise_contact_directory
+description: "Internal Contact Directory App for Enterprise built with Flutter, SQLite, and FastAPI."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_contacts: ^1.1.7
+  permission_handler: ^11.3.0
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  http: ^1.2.0
+  flutter_secure_storage: ^9.0.0
+  url_launcher: ^6.2.5
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
