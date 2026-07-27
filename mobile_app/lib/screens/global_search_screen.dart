@@ -49,7 +49,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ไม่สามารถเปิดระบบโทรออกสำหรับ $phoneNumberได้')),
+          SnackBar(content: Text('ไม่สามารถเปิดระบบโทรออกสำหรับ $phoneNumber ได้')),
         );
       }
     }
@@ -62,6 +62,15 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       appBar: AppBar(
         title: const Text('ค้นหารายชื่อส่วนกลางองค์กร'),
         backgroundColor: const Color(0xFF1E293B),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          },
+          tooltip: 'ย้อนกลับ',
+        ),
         actions: [
           IconButton(
             icon: _isSyncing
