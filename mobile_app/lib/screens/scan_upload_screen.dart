@@ -14,11 +14,15 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
   List<RawContactItemDto> _scannedContacts = [];
   bool _isScanning = false;
   bool _isUploading = false;
+  double _uploadProgressRatio = 0.0; // 0.0 to 1.0
+  String _uploadPercentText = "";
   String _statusMessage = "กดปุ่มด้านล่างเพื่อเริ่มสแกนรายชื่อในโทรศัพท์เครื่องนี้";
 
   Future<void> _startScan() async {
     setState(() {
       _isScanning = true;
+      _uploadProgressRatio = 0.0;
+      _uploadPercentText = "";
       _statusMessage = "กำลังสแกนรายชื่อในเครื่อง...";
     });
 
@@ -47,11 +51,26 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
 
     setState(() {
       _isUploading = true;
-      _statusMessage = "กำลังอัปโหลดรายชื่อขึ้นฐานข้อมูลกลาง...";
+      _uploadProgressRatio = 0.0;
+      _uploadPercentText = "0%";
+      _statusMessage = "กำลังเตรียมการอัปโหลด...";
     });
 
     try {
-      final result = await ApiService.uploadContacts(_scannedContacts);
+      final result = await ApiService.uploadContacts(
+        _scannedContacts,
+        onProgress: (processed, total, percentage) {
+          if (mounted) {
+            setState(() {
+              _uploadProgressRatio = (percentage / 100.0).clamp(0.0, 1.0);
+              _uploadPercentText = "${percentage.toInt()}% ($processed/$total รายชื่อ)";
+              _statusMessage = "กำลังอัปโหลดรายชื่อขึ้น Cloud... $_uploadPercentText";
+            });
+          }
+        },
+      );
+
+      setState(() => _statusMessage = "กำลังซิงก์ข้อมูลลง SQLite Local DB...");
       await ApiService.syncGlobalContacts();
 
       if (mounted) {
@@ -59,7 +78,7 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
         int mergedCount = result['merged_existing'] ?? 0;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("อัปโหลดสำเร็จ! รายชื่อใหม่ $newCount รายชื่อ (รวมข้อมูลเดิม $mergedCount)"),
+            content: Text("อัปโหลดสำเร็จ 100%! เพิ่มใหม่ $newCount รายชื่อ (รวมข้อมูลเดิม $mergedCount)"),
             backgroundColor: Colors.green,
           ),
         );
@@ -125,7 +144,7 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Scan Status Box
+            // Scan & Progress Status Box
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -137,9 +156,49 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (_isScanning || _isUploading)
+                    if (_isScanning)
                       const CircularProgressIndicator(color: Color(0xFF38BDF8))
-                    else
+                    else if (_isUploading) ...[
+                      // Uploading Progress Indicator + Percentage %
+                      SizedBox(
+                        height: 72,
+                        width: 72,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            CircularProgressIndicator(
+                              value: _uploadProgressRatio,
+                              strokeWidth: 6,
+                              backgroundColor: Colors.white10,
+                              color: const Color(0xFFA855F7),
+                            ),
+                            Center(
+                              child: Text(
+                                '${(_uploadProgressRatio * 100).toInt()}%',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value: _uploadProgressRatio,
+                            minHeight: 10,
+                            backgroundColor: Colors.white10,
+                            color: const Color(0xFFA855F7),
+                          ),
+                        ),
+                      ),
+                    ] else
                       Icon(
                         _scannedContacts.isNotEmpty ? Icons.check_circle_outline : Icons.contact_phone_outlined,
                         size: 64,

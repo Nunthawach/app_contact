@@ -100,20 +100,24 @@ class ApiService {
     return false;
   }
 
-  /// 3. Upload Contacts API (Chunked Batching for High Performance)
-  static Future<Map<String, dynamic>> uploadContacts(List<RawContactItemDto> contacts) async {
+  /// 3. Upload Contacts API (Chunked Batching with Progress Callback)
+  static Future<Map<String, dynamic>> uploadContacts(
+    List<RawContactItemDto> contacts, {
+    void Function(int processed, int total, double percentage)? onProgress,
+  }) async {
     String? token = await getToken();
     if (token == null || token.isEmpty) {
       throw Exception("Unauthorized: Token missing. Please log in again.");
     }
 
     if (contacts.isEmpty) {
+      if (onProgress != null) onProgress(0, 0, 100.0);
       return {'inserted_new': 0, 'merged_existing': 0};
     }
 
     int totalInserted = 0;
     int totalMerged = 0;
-    const int chunkSize = 50; // Upload in 50-contact chunks for high reliability
+    const int chunkSize = 50; // Upload in 50-contact chunks
 
     for (int i = 0; i < contacts.length; i += chunkSize) {
       int end = (i + chunkSize < contacts.length) ? i + chunkSize : contacts.length;
@@ -135,6 +139,11 @@ class ApiService {
         final resData = jsonDecode(response.body);
         totalInserted += (resData['inserted_new'] as int? ?? 0);
         totalMerged += (resData['merged_existing'] as int? ?? 0);
+
+        if (onProgress != null) {
+          double percentage = (end / contacts.length) * 100;
+          onProgress(end, contacts.length, percentage);
+        }
       } else {
         throw Exception("Batch upload failed (${response.statusCode}): ${response.body}");
       }
