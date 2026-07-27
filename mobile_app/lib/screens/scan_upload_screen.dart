@@ -37,13 +37,31 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
         _statusMessage = "ไม่สามารถสแกนรายชื่อได้: ${e.toString()}";
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("สแกนไม่สำเร็จ: ${e.toString()}"), backgroundColor: Colors.red),
-        );
+        _showErrorDialog("สแกนรายชื่อล้มเหลว", e.toString());
       }
     } finally {
       if (mounted) setState(() => _isScanning = false);
     }
+  }
+
+  void _showErrorDialog(String title, String details) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: Text(title, style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Text(details, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF38BDF8)),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ตกลง (OK)', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _uploadContacts() async {
@@ -95,9 +113,7 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
         _statusMessage = "อัปโหลดล้มเหลว: ${e.toString()}";
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("เกิดข้อผิดพลาด: ${e.toString()}"), backgroundColor: Colors.red),
-        );
+        _showErrorDialog("เกิดข้อผิดพลาดในการอัปโหลด", e.toString());
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
