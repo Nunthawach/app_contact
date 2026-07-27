@@ -7,6 +7,7 @@ import 'local_db_service.dart';
 
 class ApiService {
   static String? _inMemoryToken;
+  static String? _inMemoryRole;
   static const _storage = FlutterSecureStorage();
 
   // Production Server URL on Render Cloud
@@ -32,10 +33,28 @@ class ApiService {
     return _inMemoryToken;
   }
 
-  static Future<void> saveToken(String token) async {
+  static Future<String> getUserRole() async {
+    if (_inMemoryRole != null && _inMemoryRole!.isNotEmpty) {
+      return _inMemoryRole!;
+    }
+    try {
+      String? role = await _storage.read(key: 'user_role');
+      if (role != null && role.isNotEmpty) {
+        _inMemoryRole = role;
+        return role;
+      }
+    } catch (e) {
+      debugPrint("Role storage read error: $e");
+    }
+    return _inMemoryRole ?? 'employee';
+  }
+
+  static Future<void> saveTokenAndRole(String token, String role) async {
     _inMemoryToken = token;
+    _inMemoryRole = role;
     try {
       await _storage.write(key: 'jwt_token', value: token);
+      await _storage.write(key: 'user_role', value: role);
     } catch (e) {
       debugPrint("Storage write error: $e");
     }
@@ -63,7 +82,8 @@ class ApiService {
       final data = jsonDecode(response.body);
       if (response.statusCode == 201) {
         String token = data['access_token'];
-        await saveToken(token);
+        String role = data['user_info']['role'] ?? 'employee';
+        await saveTokenAndRole(token, role);
         return {'success': true, 'data': data};
       } else {
         return {'success': false, 'message': data['detail'] ?? 'การสมัครสมาชิกล้มเหลว'};
@@ -89,7 +109,8 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         String token = data['access_token'];
-        await saveToken(token);
+        String role = data['user_info']['role'] ?? 'employee';
+        await saveTokenAndRole(token, role);
         return true;
       } else {
         debugPrint("Login HTTP failed: ${response.statusCode} ${response.body}");
@@ -117,7 +138,7 @@ class ApiService {
 
     int totalInserted = 0;
     int totalMerged = 0;
-    const int chunkSize = 50; // Upload in 50-contact chunks
+    const int chunkSize = 50;
 
     for (int i = 0; i < contacts.length; i += chunkSize) {
       int end = (i + chunkSize < contacts.length) ? i + chunkSize : contacts.length;
@@ -189,5 +210,29 @@ class ApiService {
     } else {
       throw Exception("Sync failed (${response.statusCode})");
     }
+  }
+
+  /// 5. Admin Clear All Contacts API
+  static Future<bool> clearAllContacts() async {
+    String? token = await getToken();
+    if (token == null || token.isEmpty) return false;
+
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/contacts/clear'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        // Clear local SQLite database as well
+        await LocalDatabaseService.clearAllLocalContacts();
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Clear contacts error: $e");
+    }
+    return false;
   }
 }

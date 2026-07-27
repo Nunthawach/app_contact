@@ -17,12 +17,23 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   List<LocalContact> _contacts = [];
   final _searchController = TextEditingController();
   bool _isSyncing = false;
+  String _userRole = 'employee';
 
   @override
   void initState() {
     super.initState();
+    _checkRole();
     _performSearch('');
     _triggerBackgroundSync();
+  }
+
+  Future<void> _checkRole() async {
+    String role = await ApiService.getUserRole();
+    if (mounted) {
+      setState(() {
+        _userRole = role;
+      });
+    }
   }
 
   Future<void> _performSearch(String query) async {
@@ -53,6 +64,63 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('ไม่สามารถเปิดระบบโทรออกสำหรับ $phoneNumber ได้')),
         );
+      }
+    }
+  }
+
+  Future<void> _handleAdminClearAll() async {
+    bool confirm = (await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: const Color(0xFF1E293B),
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+                SizedBox(width: 8),
+                Text('คำเตือนสำหรับ Admin', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: const Text(
+              'คุณต้องการล้างและลบรายชื่อส่วนกลางทั้งหมดในระบบฐานข้อมูลหรือไม่? (ไม่สามารถย้อนคืนได้)',
+              style: TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('ยืนยันล้างข้อมูลทั้งหมด', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        )) ??
+        false;
+
+    if (confirm) {
+      setState(() => _isSyncing = true);
+      bool success = await ApiService.clearAllContacts();
+      await _performSearch('');
+      setState(() => _isSyncing = false);
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ล้างข้อมูลรายชื่อส่วนกลางทั้งหมดในระบบเรียบร้อยแล้ว'),
+              backgroundColor: Colors.orangeDark,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ไม่สามารถล้างข้อมูลได้ (สิทธิ์ไม่พอ หรือเซิร์ฟเวอร์ขัดข้อง)'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -93,9 +161,17 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFF0F172A),
         appBar: AppBar(
-          title: const Text('สมุดโทรศัพท์องค์กร (Directory)'),
+          title: Text(_userRole == 'admin' ? 'สมุดโทรศัพท์ (Admin)' : 'สมุดโทรศัพท์องค์กร'),
           backgroundColor: const Color(0xFF1E293B),
           actions: [
+            // Admin Clear All Contacts Button (Only visible for Admin Role)
+            if (_userRole == 'admin')
+              IconButton(
+                icon: const Icon(Icons.delete_forever, color: Colors.redAccent),
+                onPressed: _handleAdminClearAll,
+                tooltip: 'Admin: ล้างข้อมูลรายชื่อทั้งหมด',
+              ),
+
             // Sync Button
             IconButton(
               icon: _isSyncing
@@ -104,7 +180,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               onPressed: _triggerBackgroundSync,
               tooltip: 'Sync รายชื่อล่าสุด',
             ),
-            // Upload & Scan Button (Requested by User)
+            // Upload & Scan Button
             IconButton(
               icon: const Icon(Icons.cloud_upload_outlined, color: Color(0xFF38BDF8)),
               onPressed: () {
@@ -117,7 +193,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             ),
             // Logout Button
             IconButton(
-              icon: const Icon(Icons.logout_outlined, color: Colors.redAccent),
+              icon: const Icon(Icons.logout_outlined, color: Colors.grey),
               onPressed: _showExitDialog,
               tooltip: 'ออกจากระบบ',
             ),

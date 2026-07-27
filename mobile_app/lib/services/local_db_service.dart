@@ -96,6 +96,18 @@ class LocalDatabaseService {
     await batch.commit(noResult: true);
   }
 
+  /// Clear All Local Contacts
+  static Future<void> clearAllLocalContacts() async {
+    if (kIsWeb) {
+      _webInMemoryContacts.clear();
+      return;
+    }
+    final db = await database;
+    if (db != null) {
+      await db.delete('local_global_contacts');
+    }
+  }
+
   /// Get Last Sync Timestamp
   static Future<int> getLastSyncTimestamp() async {
     if (kIsWeb) return 0;

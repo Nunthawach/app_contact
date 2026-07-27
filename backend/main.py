@@ -32,12 +32,14 @@ async def lifespan(app: FastAPI):
             email=demo_email,
             password_hash=new_hash,
             full_name="Somchai Jaidee",
-            department="IT Support"
+            department="IT Support",
+            role="admin" # Default demo user is Admin
         )
         db.add(demo_user)
         db.commit()
     else:
         existing_user.password_hash = new_hash
+        existing_user.role = "admin"
         db.commit()
     yield
 
@@ -75,7 +77,6 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
             detail="กรุณากรอกชื่อ-นามสกุลให้ครบถ้วน"
         )
 
-    # Check if email is already registered
     existing_user = db.query(User).filter(User.email == req_email).first()
     if existing_user:
         raise HTTPException(
@@ -90,7 +91,8 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
         email=req_email,
         password_hash=hashed_pwd,
         full_name=req.full_name.strip(),
-        department=req.department.strip() if req.department else "General"
+        department=req.department.strip() if req.department else "General",
+        role="employee"
     )
     db.add(new_user)
     db.commit()
@@ -104,7 +106,8 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
             "id": new_user.id,
             "email": new_user.email,
             "full_name": new_user.full_name,
-            "department": new_user.department
+            "department": new_user.department,
+            "role": new_user.role
         }
     )
 
@@ -127,7 +130,8 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
             "id": user.id,
             "email": user.email,
             "full_name": user.full_name,
-            "department": user.department
+            "department": user.department,
+            "role": user.role or "employee"
         }
     )
 
@@ -228,6 +232,20 @@ def sync_contacts(
         sync_timestamp=int(time.time()),
         contacts=results
     )
+
+@app.delete("/api/v1/contacts/clear", tags=["Admin"])
+def clear_all_contacts(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Clear all global contacts and contact sources for Admin Reset
+    db.query(ContactSource).delete()
+    deleted_contacts = db.query(GlobalContact).delete()
+    db.commit()
+    return {
+        "success": True,
+        "message": f"ล้างข้อมูลรายชื่อส่วนกลางทั้งหมดเรียบร้อยแล้ว ({deleted_contacts} รายชื่อ)"
+    }
 
 if __name__ == "__main__":
     import uvicorn
