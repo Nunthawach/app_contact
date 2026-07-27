@@ -64,14 +64,18 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
             setState(() {
               _uploadProgressRatio = (percentage / 100.0).clamp(0.0, 1.0);
               _uploadPercentText = "${percentage.toInt()}% ($processed/$total รายชื่อ)";
-              _statusMessage = "กำลังอัปโหลดรายชื่อขึ้น Cloud... $_uploadPercentText";
+              _statusMessage = "กำลังทยอยอัปโหลดขึ้น Cloud... $_uploadPercentText";
             });
           }
         },
       );
 
-      setState(() => _statusMessage = "กำลังซิงก์ข้อมูลลง SQLite Local DB...");
-      await ApiService.syncGlobalContacts();
+      setState(() => _statusMessage = "กำลังซิงก์ข้อมูลลงเครื่องเพื่อใช้งานออฟไลน์...");
+      try {
+        await ApiService.syncGlobalContacts();
+      } catch (syncError) {
+        debugPrint("Sync non-fatal error: $syncError");
+      }
 
       if (mounted) {
         int newCount = result['inserted_new'] ?? 0;
@@ -161,14 +165,14 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
                     else if (_isUploading) ...[
                       // Uploading Progress Indicator + Percentage %
                       SizedBox(
-                        height: 72,
-                        width: 72,
+                        height: 80,
+                        width: 80,
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
                             CircularProgressIndicator(
                               value: _uploadProgressRatio,
-                              strokeWidth: 6,
+                              strokeWidth: 7,
                               backgroundColor: Colors.white10,
                               color: const Color(0xFFA855F7),
                             ),
@@ -178,21 +182,21 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontSize: 18,
                                 ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: LinearProgressIndicator(
                             value: _uploadProgressRatio,
-                            minHeight: 10,
+                            minHeight: 12,
                             backgroundColor: Colors.white10,
                             color: const Color(0xFFA855F7),
                           ),
