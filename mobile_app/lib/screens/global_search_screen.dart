@@ -110,7 +110,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('ล้างข้อมูลรายชื่อส่วนกลางทั้งหมดในระบบเรียบร้อยแล้ว'),
-              backgroundColor: Colors.orangeDark,
+              backgroundColor: Colors.deepOrange,
             ),
           );
         } else {
