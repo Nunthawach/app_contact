@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import 'scan_upload_screen.dart';
+import 'global_search_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -29,9 +29,10 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success && mounted) {
+        // Navigate directly to Global Search Screen after login
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const ScanUploadScreen()),
+          MaterialPageRoute(builder: (_) => const GlobalSearchScreen()),
         );
       } else {
         setState(() {
@@ -133,7 +134,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Register Button Link
               TextButton(
                 onPressed: () {
                   Navigator.push(

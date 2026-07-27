@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import 'scan_upload_screen.dart';
+import 'global_search_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -69,7 +69,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const ScanUploadScreen()),
+          MaterialPageRoute(builder: (_) => const GlobalSearchScreen()),
         );
       } else {
         setState(() {
