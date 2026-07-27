@@ -100,30 +100,50 @@ class ApiService {
     return false;
   }
 
-  /// 3. Upload Contacts API
+  /// 3. Upload Contacts API (Chunked Batching for High Performance)
   static Future<Map<String, dynamic>> uploadContacts(List<RawContactItemDto> contacts) async {
     String? token = await getToken();
     if (token == null || token.isEmpty) {
       throw Exception("Unauthorized: Token missing. Please log in again.");
     }
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/contacts/upload'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'device_id': 'flutter_mobile_app',
-        'contacts': contacts.map((c) => c.toJson()).toList(),
-      }),
-    ).timeout(const Duration(seconds: 45));
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception("Upload failed (${response.statusCode}): ${response.body}");
+    if (contacts.isEmpty) {
+      return {'inserted_new': 0, 'merged_existing': 0};
     }
+
+    int totalInserted = 0;
+    int totalMerged = 0;
+    const int chunkSize = 50; // Upload in 50-contact chunks for high reliability
+
+    for (int i = 0; i < contacts.length; i += chunkSize) {
+      int end = (i + chunkSize < contacts.length) ? i + chunkSize : contacts.length;
+      List<RawContactItemDto> chunk = contacts.sublist(i, end);
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/contacts/upload'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'device_id': 'flutter_mobile_app',
+          'contacts': chunk.map((c) => c.toJson()).toList(),
+        }),
+      ).timeout(const Duration(seconds: 45));
+
+      if (response.statusCode == 200) {
+        final resData = jsonDecode(response.body);
+        totalInserted += (resData['inserted_new'] as int? ?? 0);
+        totalMerged += (resData['merged_existing'] as int? ?? 0);
+      } else {
+        throw Exception("Batch upload failed (${response.statusCode}): ${response.body}");
+      }
+    }
+
+    return {
+      'inserted_new': totalInserted,
+      'merged_existing': totalMerged,
+    };
   }
 
   /// 4. Sync Contacts API
