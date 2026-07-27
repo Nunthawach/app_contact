@@ -55,9 +55,11 @@ class _ScanUploadScreenState extends State<ScanUploadScreen> {
       await ApiService.syncGlobalContacts();
 
       if (mounted) {
+        int newCount = result['inserted_new'] ?? 0;
+        int mergedCount = result['merged_existing'] ?? 0;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("อัปโหลดสำเร็จ! เพิ่มใหม่ ${result['data']['inserted_new']} รายชื่อ"),
+            content: Text("อัปโหลดสำเร็จ! รายชื่อใหม่ $newCount รายชื่อ (รวมข้อมูลเดิม $mergedCount)"),
             backgroundColor: Colors.green,
           ),
         );
