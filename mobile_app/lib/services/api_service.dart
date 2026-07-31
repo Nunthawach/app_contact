@@ -235,4 +235,27 @@ class ApiService {
     }
     return false;
   }
+
+  /// 6. Get Total Contacts Count in DB
+  static Future<int> getContactsCount() async {
+    String? token = await getToken();
+    if (token == null || token.isEmpty) return 0;
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/contacts/count'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['total_db_count'] as int? ?? 0;
+      }
+    } catch (e) {
+      debugPrint("Get contacts count error: $e");
+    }
+    return 0;
+  }
 }

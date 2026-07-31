@@ -210,6 +210,7 @@ def sync_contacts(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    total_db_count = db.query(GlobalContact).count()
     query = db.query(GlobalContact)
     if since and since > 0:
         since_dt = datetime.fromtimestamp(since, tz=timezone.utc)
@@ -230,8 +231,17 @@ def sync_contacts(
     return SyncResponse(
         success=True,
         sync_timestamp=int(time.time()),
+        total_db_count=total_db_count,
         contacts=results
     )
+
+@app.get("/api/v1/contacts/count", tags=["Contacts"])
+def get_contacts_count(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    total_db_count = db.query(GlobalContact).count()
+    return {"success": True, "total_db_count": total_db_count}
 
 @app.delete("/api/v1/contacts/clear", tags=["Admin"])
 def clear_all_contacts(

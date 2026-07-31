@@ -45,4 +45,5 @@ class SyncContactItem(BaseModel):
 class SyncResponse(BaseModel):
     success: bool
     sync_timestamp: int
+    total_db_count: Optional[int] = 0
     contacts: List[SyncContactItem]

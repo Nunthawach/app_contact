@@ -18,6 +18,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   final _searchController = TextEditingController();
   bool _isSyncing = false;
   String _userRole = 'employee';
+  int _totalDbCount = 0;
 
   @override
   void initState() {
@@ -47,6 +48,12 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     setState(() => _isSyncing = true);
     try {
       await ApiService.syncGlobalContacts();
+      int count = await ApiService.getContactsCount();
+      if (mounted) {
+        setState(() {
+          _totalDbCount = count;
+        });
+      }
       await _performSearch(_searchController.text);
     } catch (_) {
       // Offline fallback silently keeps local database
@@ -102,8 +109,12 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     if (confirm) {
       setState(() => _isSyncing = true);
       bool success = await ApiService.clearAllContacts();
+      int count = await ApiService.getContactsCount();
       await _performSearch('');
-      setState(() => _isSyncing = false);
+      setState(() {
+        _totalDbCount = count;
+        _isSyncing = false;
+      });
 
       if (mounted) {
         if (success) {
@@ -201,6 +212,28 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         ),
         body: Column(
           children: [
+            // Total Database Contacts Counter Banner (Small text at the top as requested)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: const Color(0xFF1E293B).withOpacity(0.8),
+              child: Row(
+                children: [
+                  const Icon(Icons.cloud_done_outlined, size: 14, color: Color(0xFF38BDF8)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'รายชื่อในฐานข้อมูลกลาง (Cloud DB): $_totalDbCount รายชื่อ',
+                    style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'โหมดออฟไลน์: ${_contacts.length} รายชื่อ',
+                    style: const TextStyle(color: Colors.grey, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+
             // Search Input Bar
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -230,22 +263,6 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                 ),
               ),
             ),
-
-            // Offline Status Indicator
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    'โหมดค้นหาความเร็วสูง (SQLite Local DB) - พบ ${_contacts.length} รายชื่อ',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
 
             // Contact Result List
             Expanded(
